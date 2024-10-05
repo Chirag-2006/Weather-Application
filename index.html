@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Condition Checker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- SEO Improvements -->
+    <meta name="description" content="Check real-time weather conditions for any city or place with our Weather Condition Checker. Get accurate temperature, humidity, and weather descriptions.">
+    <meta name="keywords" content="weather, condition, checker, temperature, humidity, forecast, city weather">
+    <meta name="author" content="Your Name or Company Name">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph meta tags for better social media sharing -->
+    <meta property="og:title" content="Weather Condition Checker">
+    <meta property="og:description" content="Check real-time weather conditions for any city or place. Get accurate temperature, humidity, and weather descriptions.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://your-website-url.com">
+    <meta property="og:image" content="https://your-website-url.com/path-to-your-logo-or-image.jpg">
+
+    <!-- Twitter Card meta tags for Twitter sharing -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Weather Condition Checker">
+    <meta name="twitter:description" content="Check real-time weather conditions for any city or place. Get accurate temperature, humidity, and weather descriptions.">
+    <meta name="twitter:image" content="https://your-website-url.com/path-to-your-logo-or-image.jpg">
+
+    <!-- Canonical URL to prevent duplicate content issues -->
+    <link rel="canonical" href="https://your-website-url.com">
+
+    <!-- Structured data for rich snippets in search results -->
+    <script type="application/ld+json">
+    {
+      "@context": "http://schema.org",
+      "@type": "WebApplication",
+      "name": "Weather Condition Checker",
+      "description": "Check real-time weather conditions for any city or place. Get accurate temperature, humidity, and weather descriptions.",
+      "url": "https://your-website-url.com",
+      "applicationCategory": "Weather",
+      "operatingSystem": "All"
+    }
+    </script>
+    <style>
+        #locationBtn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 50% 0% 0% 50%;
+            /* margin-right: 10px; */
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #locationBtn:hover {
+            background-color: #45a049;
+        }
+        #locationBtn i {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Weather Condition Checker</h1>
+        <div class="search-box">
+            <button id="locationBtn"><i class="fas fa-map-marker-alt"></i></button>
+            <input type="text" id="cityInput" placeholder="Enter city or place name">
+            <button id="searchBtn"><i class="fas fa-search"></i></button>
+        </div>
+        <div id="weatherDisplay" class="fade-in"></div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        function displayWeather(data) {
+            const { name, main, weather } = data;
+            const iconClass = getWeatherIconClass(weather[0].main);
+            const weatherType = weather[0].main.toLowerCase();
+            weatherDisplay.innerHTML = `
+                <div class="weather-icon ${weatherType}"><i class="${iconClass}"></i></div>
+                <div class="weather-info">${name}</div>
+                <div class="weather-info">${main.temp}°C</div>
+                <div class="weather-info">${weather[0].description}</div>
+                <div class="weather-info">Humidity: ${main.humidity}%</div>
+            `;
+            weatherDisplay.classList.remove('fade-in');
+            void weatherDisplay.offsetWidth;
+            weatherDisplay.classList.add('fade-in');
+        }
+
+        function getWeatherIconClass(weatherMain) {
+            const iconMap = {
+                'Clear': 'fas fa-sun',
+                'Clouds': 'fas fa-cloud',
+                'Rain': 'fas fa-cloud-rain',
+                'Snow': 'fas fa-snowflake',
+                'Thunderstorm': 'fas fa-bolt',
+                'Drizzle': 'fas fa-cloud-rain',
+                'Mist': 'fas fa-smog'
+            };
+            return iconMap[weatherMain] || 'fas fa-cloud';
+        }
+
+        // Function to get user's location
+        function getUserLocation() {
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+                    if (result.state === 'granted') {
+                        getLocation();
+                    } else if (result.state === 'prompt') {
+                        showLocationPrompt();
+                    } else if (result.state === 'denied') {
+                        weatherDisplay.innerHTML = '<p>Location access is denied. Please enable location access in your browser settings and try again.</p>';
+                    }
+                });
+            } else {
+                getLocation();
+            }
+        }
+
+        function showLocationPrompt() {
+            if (confirm("This app wants to access your location. Allow?")) {
+                getLocation();
+            } else {
+                weatherDisplay.innerHTML = '<p>Location access was not granted. Please enter a city manually.</p>';
+            }
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        getWeatherByCoords(lat, lon);
+                        getCityName(lat, lon);
+                    },
+                    (error) => {
+                        console.error("Error getting location:", error);
+                        weatherDisplay.innerHTML = '<p>Unable to get your location. Please enter a city manually.</p>';
+                    }
+                );
+            } else {
+                weatherDisplay.innerHTML = '<p>Geolocation is not supported by your browser. Please enter a city manually.</p>';
+            }
+        }
+
+        // Function to get weather by coordinates
+        async function getWeatherByCoords(lat, lon) {
+            try {
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+                const data = await response.json();
+                if (response.ok) {
+                    displayWeather(data);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                weatherDisplay.innerHTML = `<p>${error.message}</p>`;
+            }
+        }
+
+        // Function to get city name from coordinates
+        async function getCityName(lat, lon) {
+            try {
+                const response = await fetch(`https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${apiKey}`);
+                const data = await response.json();
+                if (response.ok && data.length > 0) {
+                    document.getElementById('cityInput').value = data[0].name;
+                }
+            } catch (error) {
+                console.error("Error getting city name:", error);
+            }
+        }
+
+        // Event listener for location button
+        const locationBtn = document.getElementById('locationBtn');
+        locationBtn.addEventListener('click', getUserLocation);
+
+        // Call getUserLocation when the page loads
+        window.addEventListener('load', getUserLocation);
+    </script>
+</body>
+</html>
